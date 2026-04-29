@@ -1,17 +1,14 @@
-# Добавление, просмотр и удаление записей.
-# Фильтрация по категории или дате.
-# Подсчёт суммы расходов за период.
 import datetime
 import json
 from model import Expense
+from typing import Optional
 
 records = []
 filter_date_reverse = None
 file = "history.json"
 
 
-# Принимает от пользователя дату
-def add_date():
+def add_date() -> datetime.datetime:
     while True:
         try:
             new_date = input("Введите дату в формате дд.мм.гггг: ").strip()
@@ -21,53 +18,37 @@ def add_date():
             print("Ошибка. Недопустимое значение.\n")
 
 
-# Принимает от пользователя сумму траты и округляет её до двух знаков после запятой
-def add_amount():
+def add_amount() -> float:
     while True:
         try:
             amount = float(input("Введите сумму траты: "))
             if amount < 0.01:
                 print(f"Ошибка. Значение не может быть меньше 0.01!\n")
                 continue
-
         except ValueError:
             print("Ошибка. Введите числовое значение.\n")
             continue
-
         return round(amount, 2)
 
 
-# Принимает от пользователя категорию
-def add_category():
+def add_category() -> str:
     while True:
         category = input("Введите название категории: ").strip().title()
         if category == "":
             print("Ошибка. Пустая строка.")
             continue
-
         return category
 
 
-# Добавляет новую запись в виде класса Expense
 def add_new_record():
-
     print("\nДобавление новой записи.")
-    amount = None
-    date = None
-
     amount = add_amount()
-
     date = add_date()
-
     category = add_category()
-
     new_record = Expense(amount, category, date)
-
     print("\nТекущая запись:")
     new_record.show_record()
-
     choice = input("Сохранить запись? (да / нет) ").strip().lower()
-
     if choice == "да":
         global records
         records.append(new_record)
@@ -76,16 +57,13 @@ def add_new_record():
         print("Отмена.")
 
 
-# Меняет глобальную настройку фильтрации дат
 def choice_filter_date():
     global filter_date_reverse
-
     while True:
         print("\nВыберите порядок, в котором будут показаны записи:")
         print("1. По актуальности — от новых к старым")
         print("2. По хронологии — от старых к новым")
         choice = input("> ")
-
         if choice == "1":
             filter_date_reverse = True
         elif choice == "2":
@@ -93,86 +71,65 @@ def choice_filter_date():
         else:
             print("Ошибка. Неизвестная команда.")
             continue
-
         return
 
 
-# Сортирует записи в листе по датам (в указанном порядке)
-def sort_records_date(current_list: list):
+def sort_records_date(current_list: list) -> list:
     global filter_date_reverse
-
-    if filter_date_reverse == None:
+    if filter_date_reverse is None:
         choice_filter_date()
-
-    current_list = sorted(
-        current_list, key=Expense.get_date, reverse=filter_date_reverse
-    )
-    return current_list
+    return sorted(current_list, key=Expense.get_date, reverse=filter_date_reverse)
 
 
-# Сортирует записи в листе по категориям (в алфавитном порядке)
-def sort_records_category(current_list: list):
-    current_list = sorted(current_list, key=Expense.get_category)
-    return current_list
+def sort_records_category(current_list: list) -> list:
+    return sorted(current_list, key=Expense.get_category)
 
 
-# Отображение истории (с фильтрацией по датам и категориям)
 def show_history():
     global records
-
     if len(records) == 0:
         print("\nНет сохранённых записей.")
         return
-
-    records = sort_records_date(records)
-
+    records_sorted = sort_records_date(records)
     print("\nВыберите способ сортировки: ")
     print("1. По датам")
     print("2. По категориям")
     print("Любая другая клавиша для возврата в меню.")
-
     choice = input("> ").strip()
-
     if choice == "1":
-        show_list = records
+        show_list = records_sorted
     elif choice == "2":
         show_list = sort_records_category(records)
     else:
         print("Неизвестная команда. Возврат в меню.")
         return
-
     for record in show_list:
         print("===")
         record.show_record()
         print("===")
 
 
-# Выбор периода (возвращает значения начала и конца периода)
 def period():
     print("\nУкажите начало периода.", end=" ")
     begin = add_date()
     print("\nУкажите конец периода.", end=" ")
     end = add_date()
-
     delta = end - begin
     if delta.days < 0:
         print("Ошибка. Неверно указаны начало и конец периода.")
-        return
-
+        return None
     return begin, end
 
 
-# Выводит и возвращает записи за день или период (выводит сообщение, если записи не найдены)
-def find_records_date(begin: datetime.datetime, end: datetime.datetime | None):
+def find_records_date(begin: datetime.datetime, end: Optional[datetime.datetime]):
     global records
-
-    records = sort_records_date(records)
+    records_sorted = sort_records_date(records)
     current_list = []
 
-    if end == None:
+    if end is None:
         end = begin
 
-    for record in records:
+    for record in records_sorted:
         if record.date >= begin and record.date <= end:
             print("===")
             record.show_record()
@@ -183,19 +140,16 @@ def find_records_date(begin: datetime.datetime, end: datetime.datetime | None):
         return current_list
     else:
         print("Записи не найдены.")
-        return
+        return None
 
 
-# Выводит и возвращает записи в указанной категории (выводит сообщение, если записи не найдены)
 def find_record_category(category: str):
     global records
-
-    records = sort_records_date(records)
+    records_sorted = sort_records_date(records)
     current_list = []
 
-    for record in records:
-        current_category = record.category
-        if current_category.lower() == category.lower():
+    for record in records_sorted:
+        if record.category.lower() == category.lower():
             print("===")
             record.show_record()
             print("===")
@@ -205,29 +159,27 @@ def find_record_category(category: str):
         return current_list
     else:
         print(f"Записи в категории '{category}' не найдены.")
-        return
+        return None
 
 
-# Поиск записей
 def find_records():
     global records
-
     if len(records) == 0:
         print("\nНет сохранённых записей.")
         return
-
     print("\n1. Найти записи по выбранной дате")
     print("2. Найти записи за выбранный период")
     print("3. Найти записи по категории")
     print("Любая другая клавиша для возврата в меню.")
-
     choice = input("> ")
-
     if choice == "1":
         date = add_date()
         find_records_date(date, None)
     elif choice == "2":
-        begin, end = period()
+        period_result = period()
+        if period_result is None:
+            return
+        begin, end = period_result
         find_records_date(begin, end)
     elif choice == "3":
         category = add_category()
@@ -237,131 +189,108 @@ def find_records():
         return
 
 
-# Удаление всех записей в указанном листе из списка записей
 def delete(deletion_list: list):
     global records
-
-    old_records = records
-
-    for record in old_records:
-        if record in deletion_list:
+    for record in deletion_list:
+        if record in records:
             records.remove(record)
 
 
-# Выбор и удаление записей
 def remove_records():
     global records
-
     if len(records) == 0:
         print("\nНет сохранённых записей.")
         return
-
     print("\n1. Найти и удалить записи по выбранной дате")
     print("2. Найти и удалить записи за выбранный период")
     print("3. Найти и удалить записи по категории")
     print("4. Удалить все записи")
     print("Любая другая клавиша для возврата в меню.")
-
     choice = input("> ")
-
     if choice == "1":
         date = add_date()
-        deletion_list = find_records_date(date)
+        deletion_list = find_records_date(date, None)
     elif choice == "2":
-        begin, end = period()
+        period_result = period()
+        if period_result is None:
+            return
+        begin, end = period_result
         deletion_list = find_records_date(begin, end)
     elif choice == "3":
-        category = input("Введите название категории: ").strip()
+        category = add_category()
         deletion_list = find_record_category(category)
     elif choice == "4":
-        deletion_list = records
+        deletion_list = records.copy()
         print("Выбраны все сохранённые записи. ", end="")
     else:
         print("Неизвестная команда. Возврат в меню.")
         return
 
-    if deletion_list == None:
+    if not deletion_list:
         return
 
-    choice = input("Удалить? (да / нет) ").strip().lower()
-    if choice == "да":
+    choice_del = input("Удалить? (да / нет) ").strip().lower()
+    if choice_del == "да":
         delete(deletion_list)
         print("Записи были удалены.")
     else:
         print("Отмена.")
 
 
-# Рассчёт суммы расходов за период
 def find_amount_period():
-    begin, end = period()
-
-    records_period = find_records_date(begin, end)
-    if records_period == None:
+    period_result = period()
+    if period_result is None:
         return
-
-    total_amount = 0
-    for record in records_period:
-        total_amount += record.amount
-
+    begin, end = period_result
+    records_period = find_records_date(begin, end)
+    if records_period is None:
+        return
+    total_amount = sum(record.amount for record in records_period)
     print("\nСумма трат за период:", total_amount)
 
 
-# Загрузка записей из файла
 def load_records():
     global records
     global file
-
     try:
         with open(file, "r", encoding="utf-8") as f:
-            load_records = json.load(f)
+            loaded_data = json.load(f)
     except FileNotFoundError:
         print(f"Ошибка. Файл {file} не найден.")
         return
-
-    if not load_records:
+    if not loaded_data:
         print("Нет сохранённых записей.")
         return
-
-    for record in load_records:
+    for record in loaded_data:
         amount = record["Amount"]
         category = record["Category"]
-        date = record["Date"]
-
+        date_str = record["Date"]
         try:
-            date = datetime.datetime.strptime(date, "%d.%m.%Y")
+            date_obj = datetime.datetime.strptime(date_str, "%d.%m.%Y")
         except ValueError:
-            print("Ошибка! У записи неверно указана дата:", date)
+            print("Ошибка! У записи неверно указана дата:", date_str)
             print("Запись не будет загружена.")
             continue
-
-        new_record = Expense(amount, category, date)
-
-        if not new_record in records:
+        new_record = Expense(amount, category, date_obj)
+        if new_record not in records:
             records.append(new_record)
-
     print("Доступные записи были загружены!")
 
 
-# Сохранение записей в файл
 def save_records():
     global records
     global file
-
     if len(records) == 0:
         print("\nНет сохранённых записей.")
         return
-
-    records = sort_records_date(records)
-
+    records_sorted = sort_records_date(records)
     json_list = []
-
-    for record in records:
+    for record in records_sorted:
         amount = record.amount
         category = record.category
-        date = datetime.datetime.strftime(record.date, "%d.%m.%Y")
-        json_record = {"Amount": amount, "Category": category, "Date": date}
+        date_str = datetime.datetime.strftime(record.date, "%d.%m.%Y")
+        json_record = {"Amount": amount, "Category": category, "Date": date_str}
         json_list.append(json_record)
-
     print(
         f"\nСтарый файл {file} будет полностью перезаписан. Убедитесь, что данные из него были загружены или сохранены."
     )
@@ -369,20 +298,15 @@ def save_records():
     if choice != "да":
         print("Отмена.")
         return
-
     with open(file, "w", encoding="utf-8") as f:
         json.dump(json_list, f, indent=4, ensure_ascii=False)
+    print(f"\nЗаписи были успешно сохранены в файл {file}.")
 
-    print(f"\nЗаписи были загружены в файл {file}.")
 
-
-# Главное меню
 def main():
     global file
     was_loaded = False
-
     print("Ваш трекер расходов~")
-
     while True:
         print("\nВыберите команду:")
         print("1. Добавить новую запись")
@@ -392,10 +316,8 @@ def main():
         print("5. Рассчитать сумму расходов за период")
         print(f"6. Загрузить записи из файла {file}")
         print(f"7. Сохранить записи в файл {file}")
-        print("8. Завершение работы")
-
+        print("8. Завершить работу")
         choice = input("> ").strip()
-
         if choice == "1":
             add_new_record()
         elif choice == "2":
@@ -406,16 +328,14 @@ def main():
             find_records()
         elif choice == "5":
             find_amount_period()
-
         elif choice == "6":
-            if was_loaded == False:
+            if not was_loaded:
                 load_records()
                 was_loaded = True
             else:
                 print(f"Записи из файла {file} уже были загружены.")
         elif choice == "7":
             save_records()
-
         elif choice == "8":
             print("До новых встреч!")
             break
